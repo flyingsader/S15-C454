@@ -9,6 +9,37 @@ from pprint import pprint
 from xml.dom import minidom
 from HTMLParser import HTMLParser
 from pymongo import MongoClient
+import csv
+
+def add_crimes(id, incidentDate, category, stat, statDesc, addressStreet, city, zip, xCoor, yCoor, incidentId, reportDistrict, seq, unitId, unitName, deleted):
+    exists = db.crimes.find(
+        {
+            "id" : id
+         }
+    )
+
+    if exists.count() == 0:
+        result = db.crimes.insert_one(
+            {
+                "id": id,
+                "incidentDate" : incidentDate,
+                "category" : category,
+                "stat" : stat,
+                "statDesc" : statDesc,
+                "addressStreet" : addressStreet,
+                "city" : city,
+                "zip" : zip,
+                "xCoor" : xCoor,
+                "yCoor" : yCoor,
+                "incidentId" : incidentId,
+                "reportDistrict" : reportDistrict,
+                "seq" : seq,
+                "unitId" : unitId,
+                "unitName" : unitName,
+                "deleted " : deleted
+            }
+        )
+        print city
 
 def add_news(news_source, news_title, news_link, news_body):
     exists = db.news.find({"source": news_source, "link": news_link})
@@ -23,7 +54,7 @@ def add_news(news_source, news_title, news_link, news_body):
             }
         )
 
-        print result.inserted_id
+    print news_link
 
 def pretty(d, indent=0):
     for key, value in d.iteritems():
@@ -88,11 +119,24 @@ def strip_tags(html):
 ###############################################################
 ## Data Acquisition Main()
 
+debug = 0
+
 # DB client
 mongo = MongoClient()
 db = mongo.bigDataTest
 
-# Loop through sources
+# Sheriff's Department Data
+# http://shq.lasdnews.net/CrimeStats/CAASS/PART_I_AND_II_CRIMES.csv
+
+print "Loading Sheriff's crimes database..."
+url = 'http://shq.lasdnews.net/CrimeStats/CAASS/PART_I_AND_II_CRIMES.csv'
+response = urllib2.urlopen(url)
+cr = csv.reader(response)
+
+for row in cr:
+    add_crimes(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9], row[10], row[11], row[12], row[13], row[14], row[15])
+
+# Loop through news sources
 dbSources = db.sources.find()
 for s in dbSources:
     source = s["name"]
@@ -106,7 +150,7 @@ for s in dbSources:
 
         story = data["list"]["story"]
         storycount = len(story)
-        # print "# of stories: {}".format(storycount)
+        if debug : print ("# of stories: {}".format(storycount))
 
         for i in range(len(story)):
             item = story[i]
@@ -123,13 +167,12 @@ for s in dbSources:
             body = item["list"]["story"][0]["text"]["paragraph"]
 
 
-            #print title
-            #print itemlink
-            # pprint(body)
+            if debug : print title
+            if debug : print itemlink
             for j in range(len(body)):
                 try:
                     bodyText = body[j]["$text"]
-                    #print bodyText
+                    if debug : print bodyText
                 except:
                     pass
 
@@ -142,80 +185,13 @@ for s in dbSources:
             item = items[i]
             title = item["title"]
             link = item["link"]
-            #print title
-            #print link
+            if debug : print title
+            if debug : print link
             soup = get_html(link)
             body = soup.findAll("div", "prose-body")[0]
-            #pprint(strip_tags(body))
-            # print strip_tags(body)
-            #print ""
+            if debug : print ""
 
-            #print body
+            if debug : print body
             add_news(source, title, link, strip_tags(body))
 
 
-# NPR
-# url = "http://api.npr.org/query?id=1001&apiKey=MDE3NTQ2MTM2MDE0MTcwNTkyMjRlMjc5NA001&output=json"
-# response = urllib.urlopen(url)
-# data = json.loads(response.read())
-# response.close();
-# source = "NPR"
-#
-# print "Pulling from ", source, "..."
-#
-# # print contents
-# # pprint(jsondata)
-#
-# story = data["list"]["story"]
-# storycount = len(story)
-# # print "# of stories: {}".format(storycount)
-#
-# for i in range(len(story)):
-#     item = story[i]
-#
-#     # title
-#     title = item["title"]["$text"]
-#
-#     # link
-#     itemlink = item["link"][1]["$text"] + "&output=json"
-#
-#     # body
-#     itemresponse = urllib.urlopen(itemlink)
-#     item = json.loads(itemresponse.read())
-#     body = item["list"]["story"][0]["text"]["paragraph"]
-#
-#
-#     #print title
-#     #print itemlink
-#     # pprint(body)
-#     for j in range(len(body)):
-#         try:
-#             bodyText = body[j]["$text"]
-#             #print bodyText
-#         except:
-#             pass
-#
-#     add_news(source, title, itemlink, bodyText)
-
-# xmldoc = get_xml_as_dictionary("http://feeds.scpr.org/893KpccSouthernCaliforniaNews?format=xml")
-# source = "KPCC"
-#
-# print "Pulling from ", source, "..."
-#
-# items = xmldoc["rss"]["channel"]["item"]
-# for i in range(len(items)):
-#     item = items[i]
-#     title = item["title"]
-#     link = item["link"]
-#     #print title
-#     #print link
-#     soup = get_html(link)
-#     body = soup.findAll("div", "prose-body")[0]
-#     #pprint(strip_tags(body))
-#     # print strip_tags(body)
-#     #print ""
-#
-#     #print body
-#     add_news(source, title, link, strip_tags(body))
-
-# pretty(items,0)
