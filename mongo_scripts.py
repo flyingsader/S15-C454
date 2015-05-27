@@ -46,7 +46,7 @@ def extract_city(text, city_list):
         if m:
             return city
 
-def add_source(name, url, format, divContainer):
+def add_source(name, url, format):
     exists = db.sources.find({"name": name})
 
     if exists.count() == 0:
@@ -54,20 +54,16 @@ def add_source(name, url, format, divContainer):
             {
                 "name": name,
                 "url": url,
-                "format": format,
-                "divContainer": divContainer
+                "format": format
             }
         )
         print "Added ", name, "to sources..."
     else:
         print name, "already exists in sources."
 
-#db.sources.remove({})
-
 # Add News Sources
-add_source("NPR","http://api.npr.org/query?id=1001&apiKey=MDE3NTQ2MTM2MDE0MTcwNTkyMjRlMjc5NA001&output=json", "json", "")
-add_source("KPCC", "http://feeds.scpr.org/893KpccSouthernCaliforniaNews?format=xml", "rss", "prose-body")
-add_source("NBC-LA", "http://www.nbclosangeles.com/news/local/?rss=y&embedThumb=y&summary=y", "rss", "articleText")
+add_source("NPR","http://api.npr.org/query?id=1001&apiKey=MDE3NTQ2MTM2MDE0MTcwNTkyMjRlMjc5NA001&output=json", "json")
+add_source("KPCC", "http://feeds.scpr.org/893KpccSouthernCaliforniaNews?format=xml", "rss")
 
 # Add Crime Aliases: used to initialize data in mongodb
 add_crime_alias("CRIMINAL HOMICIDE", ["murder", "homicide", "criminal homicide"])
@@ -124,7 +120,6 @@ print ""
 #########################################################################
 # Get list of crimes
 dbCrimes = db.crime_alias.find()
-
 for c in dbCrimes:
     # Get list of aliases for each crime
     aliasList = c["alias"]
@@ -133,8 +128,8 @@ for c in dbCrimes:
         REGEX = re.compile(a)
         crimeStories = db.news.find({ "body": {"$regex" : REGEX } })
         if crimeStories.count() > 0 :
-            print "Crime" , a, "has", crimeStories.count(), "matches"
-            #for story in crimeStories:
-                #print " >> ", story["title"]
+            print "crime" , a, "has", crimeStories.count(), "matches"
+            for story in crimeStories:
+                print " >> ", story["title"]
 
 
